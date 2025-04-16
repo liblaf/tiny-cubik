@@ -9,4 +9,6 @@ build/
 # End of https://www.toptal.com/developers/gitignore/api/xmake
 
 .cache/
+.polyscope.ini
 compile_commands.json
+imgui.ini
