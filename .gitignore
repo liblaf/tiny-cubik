@@ -12,3 +12,5 @@ build/
 .polyscope.ini
 compile_commands.json
 imgui.ini
+repomix-instruction.md
+repomix-output.xml

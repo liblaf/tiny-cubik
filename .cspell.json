@@ -2,7 +2,16 @@
   "$schema": "https://raw.githubusercontent.com/streetsidesoftware/cspell/main/packages/cspell-types/cspell.schema.json",
   "version": "0.2",
   "language": "en",
-  "words": ["cubik", "eigen", "illum", "mtllib", "newmtl", "usemtl", "xmake"],
+  "words": [
+    "cubik",
+    "cwise",
+    "eigen",
+    "illum",
+    "imgui",
+    "newmtl",
+    "repomix",
+    "xmake"
+  ],
   "ignorePaths": [
     "**/.cspell.*",
     "**/.git",
