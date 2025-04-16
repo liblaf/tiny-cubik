@@ -8,6 +8,7 @@
 #include <tiny_obj_loader.h>
 
 #include <Eigen/Dense>
+#include <cctype>
 #include <glm/gtx/transform.hpp>
 #include <string>
 #include <vector>
@@ -21,9 +22,24 @@ auto select_meshes(const char notation)
   for (int x = 0; x < 3; x++) {
     for (int y = 0; y < 3; y++) {
       for (int z = 0; z < 3; z++) {
-        switch (notation) {
+        switch (std::tolower(notation)) {
           case 'f':
             if (z == 2) groups.push_back(cubik::group_name(x, y, z));
+            break;
+          case 'b':
+            if (z == 0) groups.push_back(cubik::group_name(x, y, z));
+            break;
+          case 'u':
+            if (y == 2) groups.push_back(cubik::group_name(x, y, z));
+            break;
+          case 'd':
+            if (y == 0) groups.push_back(cubik::group_name(x, y, z));
+            break;
+          case 'l':
+            if (x == 0) groups.push_back(cubik::group_name(x, y, z));
+            break;
+          case 'r':
+            if (x == 2) groups.push_back(cubik::group_name(x, y, z));
             break;
         }
       }
@@ -45,7 +61,9 @@ auto callback() -> void {
   static float rotation = 0.0f;
   ImGui::Checkbox("Play", &play);
   if (!play) return;
-  std::vector<polyscope::SurfaceMesh*> meshes = select_meshes('f');
+  // TODO: read input from keyboard
+  static char notation = 'f';
+  std::vector<polyscope::SurfaceMesh*> meshes = select_meshes(notation);
   rotation += 0.01f;  // Increment rotation angle
   glm::mat4 transform = glm::rotate(rotation, glm::vec3(0.0f, 0.0f, 1.0f));
   for (auto* mesh : meshes) {
