@@ -1,10 +1,10 @@
 #include "assets.h"
 
+#include <spdlog/spdlog.h>
+
 #include <memory>
 
-#include "spdlog/spdlog.h"
-
-namespace cubik {
+namespace cube {
 
 const std::unique_ptr<tinyobj::ObjReader> load_cube() {
   std::unique_ptr<tinyobj::ObjReader> reader =
@@ -20,4 +20,4 @@ const std::unique_ptr<tinyobj::ObjReader> load_cube() {
   return reader;
 }
 
-}  // namespace cubik
+}  // namespace cube

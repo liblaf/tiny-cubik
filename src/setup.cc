@@ -2,9 +2,11 @@
 
 #include <Eigen/src/Core/Matrix.h>
 #include <fmt/format.h>
+#include <polyscope/options.h>
 #include <polyscope/polyscope.h>
 #include <polyscope/surface_color_quantity.h>
 #include <polyscope/surface_mesh.h>
+#include <polyscope/types.h>
 
 #include <Eigen/Dense>
 #include <glm/fwd.hpp>
@@ -12,10 +14,64 @@
 #include <utility>
 #include <vector>
 
-#include "polyscope/options.h"
-#include "polyscope/types.h"
+#include "utils.h"
 
-namespace cubik {
+namespace cube {
+
+auto setup(const tinyobj::ObjReader& reader) -> void {
+  register_cube(reader);
+  create_groups(reader);
+  setup_ground(reader);
+}
+
+auto create_groups(const tinyobj::ObjReader& reader) -> void {
+  const tinyobj::attrib_t& attrib = reader.GetAttrib();
+  const std::vector<tinyobj::shape_t>& shapes = reader.GetShapes();
+  const Eigen::MatrixX3f vertices = load_vertices(attrib.vertices);
+  const auto [scene_bound_min, scene_bound_max] = bounding_box(vertices);
+  const glm::vec3 cube_center = (scene_bound_max + scene_bound_min) / 2.0f;
+  const glm::vec3 cube_length = (scene_bound_max - scene_bound_min) / 3.0f;
+  for (glm::ivec3 location : locations()) {
+    const std::string name = group_name(location);
+    polyscope::createGroup(name);
+  }
+  for (const tinyobj::shape_t& shape : shapes) {
+    const std::vector<std::vector<int>> faces = load_faces(shape.mesh);
+    const auto [shape_bound_min, shape_bound_max] =
+        bounding_box(vertices, faces);
+    const glm::vec3 center = (shape_bound_max + shape_bound_min) / 2.0f;
+    const glm::ivec3 location =
+        glm::round((center - cube_center) / cube_length);
+    const std::string name = group_name(location);
+    polyscope::getSurfaceMesh(shape.name)->addToGroup(name);
+  }
+}
+
+auto register_cube(const tinyobj::ObjReader& reader) -> void {
+  const tinyobj::attrib_t& attrib = reader.GetAttrib();
+  const std::vector<tinyobj::material_t>& materials = reader.GetMaterials();
+  const std::vector<tinyobj::shape_t>& shapes = reader.GetShapes();
+  const Eigen::MatrixX3f vertices = load_vertices(attrib.vertices);
+  for (const tinyobj::shape_t& shape : shapes) {
+    std::vector<std::vector<int>> indices = load_faces(shape.mesh);
+    polyscope::SurfaceMesh* mesh =
+        polyscope::registerSurfaceMesh(shape.name, vertices, indices);
+    Eigen::MatrixX3f colors = load_diffuse(materials, shape.mesh);
+    polyscope::SurfaceFaceColorQuantity* diffuse =
+        mesh->addFaceColorQuantity("diffuse", colors);
+    diffuse->setEnabled(true);
+  }
+}
+
+auto setup_ground(const tinyobj::ObjReader& reader) -> void {
+  const tinyobj::attrib_t& attrib = reader.GetAttrib();
+  const Eigen::MatrixX3f vertices = load_vertices(attrib.vertices);
+  const auto [scene_bound_min, scene_bound_max] = bounding_box(vertices);
+  const glm::vec3 size = scene_bound_max - scene_bound_min;
+  polyscope::options::groundPlaneHeight = scene_bound_min.z - (size.z / 2.0);
+  polyscope::options::groundPlaneHeightMode =
+      polyscope::GroundPlaneHeightMode::Manual;
+}
 
 auto bounding_box(const Eigen::MatrixX3f& vertices)
     -> std::pair<glm::vec3, glm::vec3> {
@@ -33,7 +89,7 @@ auto bounding_box(const Eigen::MatrixX3f& vertices,
       Eigen::Vector3f::Constant(std::numeric_limits<float>::max());
   Eigen::Vector3f bound_max =
       Eigen::Vector3f::Constant(std::numeric_limits<float>::lowest());
-  for (const auto& face : faces) {
+  for (const std::vector<int>& face : faces) {
     for (const int vid : face) {
       const Eigen::Vector3f& vertex = vertices.row(vid);
       bound_min = bound_min.cwiseMin(vertex);
@@ -45,7 +101,7 @@ auto bounding_box(const Eigen::MatrixX3f& vertices,
   return std::make_pair(min, max);
 }
 
-auto load_vertices(std::vector<float> vertices) -> Eigen::MatrixX3f {
+auto load_vertices(const std::vector<float>& vertices) -> Eigen::MatrixX3f {
   Eigen::MatrixX3f result(vertices.size() / 3, 3);
   for (size_t i = 0; i < vertices.size() / 3; ++i) {
     result(i, 0) = vertices[3 * i + 0];
@@ -77,77 +133,11 @@ auto load_diffuse(const std::vector<tinyobj::material_t>& materials,
   Eigen::MatrixX3f colors(n_faces, 3);
   for (size_t i = 0; i < n_faces; ++i) {
     int material_id = mesh.material_ids[i];
-    const tinyobj::material_t& material = materials[material_id];
+    const tinyobj::material_t material = materials[material_id];
     colors.row(i) << material.diffuse[0], material.diffuse[1],
         material.diffuse[2];
   }
   return colors;
 }
 
-auto group_name(const glm::ivec3 grid) -> std::string {
-  return group_name(grid.x, grid.y, grid.z);
-}
-
-auto group_name(const int x, const int y, const int z) -> std::string {
-  return fmt::format("{}{}{}", x, y, z);
-}
-
-auto setup_ground(const tinyobj::ObjReader& reader) -> void {
-  const tinyobj::attrib_t& attrib = reader.GetAttrib();
-  const Eigen::MatrixX3f vertices = load_vertices(attrib.vertices);
-  const auto [scene_bound_min, scene_bound_max] = bounding_box(vertices);
-  const glm::vec3 size = scene_bound_max - scene_bound_min;
-  polyscope::options::groundPlaneHeight = scene_bound_min.z - (size.z / 2.0);
-  polyscope::options::groundPlaneHeightMode =
-      polyscope::GroundPlaneHeightMode::Manual;
-}
-
-auto register_cube(const tinyobj::ObjReader& reader) -> void {
-  const tinyobj::attrib_t& attrib = reader.GetAttrib();
-  const std::vector<tinyobj::material_t>& materials = reader.GetMaterials();
-  const std::vector<tinyobj::shape_t>& shapes = reader.GetShapes();
-  const Eigen::MatrixX3f vertices = load_vertices(attrib.vertices);
-  for (const tinyobj::shape_t& shape : shapes) {
-    std::vector<std::vector<int>> indices = load_faces(shape.mesh);
-    polyscope::SurfaceMesh* mesh =
-        polyscope::registerSurfaceMesh(shape.name, vertices, indices);
-    Eigen::MatrixX3f colors = load_diffuse(materials, shape.mesh);
-    polyscope::SurfaceFaceColorQuantity* color =
-        mesh->addFaceColorQuantity("diffuse", colors);
-    color->setEnabled(true);
-  }
-}
-
-auto create_groups(const tinyobj::ObjReader& reader) -> void {
-  const tinyobj::attrib_t& attrib = reader.GetAttrib();
-  const std::vector<tinyobj::shape_t>& shapes = reader.GetShapes();
-  const Eigen::MatrixX3f vertices = load_vertices(attrib.vertices);
-  const auto [scene_bound_min, scene_bound_max] = bounding_box(vertices);
-  const glm::vec3 cube_length = (scene_bound_max - scene_bound_min) / 3.0f;
-  for (int x = 0; x < 3; ++x) {
-    for (int y = 0; y < 3; ++y) {
-      for (int z = 0; z < 3; ++z) {
-        const std::string name = group_name(x, y, z);
-        polyscope::createGroup(name);
-      }
-    }
-  }
-  for (const tinyobj::shape_t& shape : shapes) {
-    const std::vector<std::vector<int>> indices = load_faces(shape.mesh);
-    const auto [shape_bound_min, shape_bound_max] =
-        bounding_box(vertices, indices);
-    const glm::vec3 center = (shape_bound_max + shape_bound_min) / 2.0f;
-    const glm::ivec3 grid =
-        glm::floor((center - scene_bound_min) / cube_length);
-    const std::string name = group_name(grid);
-    polyscope::getSurfaceMesh(shape.name)->addToGroup(name);
-  }
-}
-
-auto setup_scene(const tinyobj::ObjReader& reader) -> void {
-  setup_ground(reader);
-  register_cube(reader);
-  create_groups(reader);
-}
-
-}  // namespace cubik
+}  // namespace cube

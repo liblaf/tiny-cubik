@@ -1,81 +1,39 @@
-#include <fmt/format.h>
-#include <imgui.h>
-#include <polyscope/group.h>
+
 #include <polyscope/polyscope.h>
-#include <polyscope/structure.h>
-#include <polyscope/surface_mesh.h>
-#include <polyscope/weak_handle.h>
-#include <tiny_obj_loader.h>
 
-#include <Eigen/Dense>
-#include <cctype>
-#include <glm/gtx/transform.hpp>
-#include <string>
-#include <vector>
+#include <memory>
 
+#include "action.h"
 #include "assets.h"
+#include "cube.h"
+#include "imgui.h"
 #include "setup.h"
 
-auto select_meshes(const char notation)
-    -> std::vector<polyscope::SurfaceMesh*> {
-  std::vector<std::string> groups;
-  for (int x = 0; x < 3; x++) {
-    for (int y = 0; y < 3; y++) {
-      for (int z = 0; z < 3; z++) {
-        switch (std::tolower(notation)) {
-          case 'f':
-            if (z == 2) groups.push_back(cubik::group_name(x, y, z));
-            break;
-          case 'b':
-            if (z == 0) groups.push_back(cubik::group_name(x, y, z));
-            break;
-          case 'u':
-            if (y == 2) groups.push_back(cubik::group_name(x, y, z));
-            break;
-          case 'd':
-            if (y == 0) groups.push_back(cubik::group_name(x, y, z));
-            break;
-          case 'l':
-            if (x == 0) groups.push_back(cubik::group_name(x, y, z));
-            break;
-          case 'r':
-            if (x == 2) groups.push_back(cubik::group_name(x, y, z));
-            break;
-        }
-      }
-    }
-  }
-  std::vector<polyscope::SurfaceMesh*> meshes;
-  for (const std::string& group_name : groups) {
-    polyscope::Group* group = polyscope::getGroup(group_name);
-    for (const polyscope::WeakHandle<polyscope::Structure> child :
-         group->childrenStructures) {
-      meshes.push_back(polyscope::getSurfaceMesh(child.get().name));
-    }
-  }
-  return meshes;
-}
-
-auto callback() -> void {
-  static bool play = true;
-  static float rotation = 0.0f;
-  ImGui::Checkbox("Play", &play);
-  if (!play) return;
-  // TODO: read input from keyboard
-  static char notation = 'f';
-  std::vector<polyscope::SurfaceMesh*> meshes = select_meshes(notation);
-  rotation += 0.01f;  // Increment rotation angle
-  glm::mat4 transform = glm::rotate(rotation, glm::vec3(0.0f, 0.0f, 1.0f));
-  for (auto* mesh : meshes) {
-    mesh->setTransform(transform);
+auto callback(std::weak_ptr<cube::Cube> cube) -> void {
+  cube.lock()->update();
+  bool clockwise = !(ImGui::IsKeyDown(ImGuiKey::ImGuiKey_LeftShift) ||
+                     ImGui::IsKeyDown(ImGuiKey::ImGuiKey_RightShift));
+  if (ImGui::IsKeyPressed(ImGuiKey::ImGuiKey_F)) {
+    cube.lock()->start(cube::Action(cube::Action::FRONT, clockwise));
+  } else if (ImGui::IsKeyPressed(ImGuiKey::ImGuiKey_B)) {
+    cube.lock()->start(cube::Action(cube::Action::BACK, clockwise));
+  } else if (ImGui::IsKeyPressed(ImGuiKey::ImGuiKey_U)) {
+    cube.lock()->start(cube::Action(cube::Action::UP, clockwise));
+  } else if (ImGui::IsKeyPressed(ImGuiKey::ImGuiKey_D)) {
+    cube.lock()->start(cube::Action(cube::Action::DOWN, clockwise));
+  } else if (ImGui::IsKeyPressed(ImGuiKey::ImGuiKey_L)) {
+    cube.lock()->start(cube::Action(cube::Action::LEFT, clockwise));
+  } else if (ImGui::IsKeyPressed(ImGuiKey::ImGuiKey_R)) {
+    cube.lock()->start(cube::Action(cube::Action::RIGHT, clockwise));
   }
 }
 
 auto main(int argc, char** argv) -> int {
   polyscope::init();
-  auto obj = cubik::load_cube();
-  cubik::setup_scene(*obj);
-  polyscope::state::userCallback = callback;
+  auto obj = cube::load_cube();
+  cube::setup(*obj);
+  std::shared_ptr<cube::Cube> cube = std::make_shared<cube::Cube>();
+  polyscope::state::userCallback = std::bind(callback, cube);
   polyscope::show();
   return 0;
 }
