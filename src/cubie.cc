@@ -18,9 +18,6 @@ Cubie::Cubie(const glm::ivec3 location)
     : _location(location), _location_initial(location) {}
 
 auto Cubie::end(const Action action) -> void {
-  if (this->_location_initial == glm::ivec3(1, 1, 1)) {
-    dbg(this->name(), glm::to_string(this->transform()));
-  }
   this->_location = action.rotate(this->_location);
 }
 

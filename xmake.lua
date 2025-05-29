@@ -11,7 +11,6 @@ target("tiny-cubik", function()
   set_kind("binary")
   set_languages("cxx20")
   set_toolchains("clang")
-  -- set_warnings("all")
 
   add_packages("dbg-macro")
   add_packages("eigen")

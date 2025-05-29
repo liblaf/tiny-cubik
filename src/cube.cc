@@ -19,6 +19,25 @@ Cube::Cube() {
 
 auto Cube::action() const -> Action { return this->_action; }
 
+auto Cube::action(const Action action) -> void {
+  if (this->animating()) {
+    spdlog::debug("Cube is already animating.");
+    return;
+  }
+  if (this->recording()) this->_actions.push_back(action);
+  this->_action = action;
+  this->_animating = true;
+  this->_animation_start = std::chrono::high_resolution_clock::now();
+  for (const std::weak_ptr<Cubie> cubie : this->animating_cubies())
+    cubie.lock()->start();
+}
+
+auto Cube::animate_end() -> void {
+  for (const std::weak_ptr<Cubie> cubie : this->animating_cubies())
+    cubie.lock()->end(this->action());
+  this->_animating = false;
+}
+
 auto Cube::animating_cubies() const -> std::vector<std::weak_ptr<Cubie>> {
   std::vector<std::weak_ptr<Cubie>> animating_cubies;
   const Action action = this->action();
@@ -32,22 +51,46 @@ auto Cube::animating_cubies() const -> std::vector<std::weak_ptr<Cubie>> {
 
 auto Cube::animating() const -> bool { return this->_animating; }
 
-auto Cube::end() -> void {
-  for (const std::weak_ptr<Cubie> cubie : this->animating_cubies())
-    cubie.lock()->end(this->action());
-  this->_animating = false;
+auto Cube::idle() const -> bool { return this->_state == State::IDLE; }
+
+auto Cube::record_end() -> void {
+  this->_actions.clear();
+  this->_state = State::IDLE;
 }
 
-auto Cube::start(const Action action) -> void {
-  if (this->animating()) {
-    spdlog::debug("Cube is already animating.");
+auto Cube::record_start() -> void {
+  if (this->_state != State::IDLE) {
+    spdlog::warn("Cube is already recording or replaying.");
     return;
   }
-  this->_action = action;
-  this->_animating = true;
-  this->_animation_start = std::chrono::high_resolution_clock::now();
-  for (const std::weak_ptr<Cubie> cubie : this->animating_cubies())
-    cubie.lock()->start();
+  this->_state = State::RECORDING;
+  this->_actions.clear();
+  spdlog::info("Recording started.");
+}
+
+auto Cube::recording() const -> bool {
+  return this->_state == State::RECORDING;
+}
+
+auto Cube::records() const -> std::deque<Action> { return this->_actions; }
+
+auto Cube::replay(const std::deque<Action>& actions) -> void {
+  if (this->_state != State::IDLE) {
+    spdlog::warn("Cube is already recording or replaying.");
+    return;
+  }
+  if (actions.empty()) {
+    spdlog::warn("No actions to replay.");
+    return;
+  }
+  this->_actions = actions;
+  this->_state = State::REPLAYING;
+  this->action(this->_actions.front());
+  this->_actions.pop_front();
+}
+
+auto Cube::replaying() const -> bool {
+  return this->_state == State::REPLAYING;
 }
 
 auto Cube::update() -> void {
@@ -59,7 +102,18 @@ auto Cube::update() -> void {
   if (end) progress = 1.0;
   for (std::weak_ptr<Cubie> cubie : this->animating_cubies())
     cubie.lock()->update(this->action(), progress);
-  if (end) this->end();
+  if (end) {
+    this->animate_end();
+    if (this->replaying()) {
+      if (!this->_actions.empty()) {
+        this->action(this->_actions.front());
+        this->_actions.pop_front();
+      } else {
+        this->_state = State::IDLE;
+        spdlog::info("Replay finished.");
+      }
+    }
+  }
 }
 
 }  // namespace cube
