@@ -1,2 +1,1 @@
-F B U D L R
-R' L' D' U' B' F'
+F B U D L R R' L' D' U' B' F'
