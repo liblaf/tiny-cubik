@@ -10,6 +10,7 @@ build/
 
 .cache/
 .polyscope.ini
+*.mp4
 *.pdf
 *.zip
 compile_commands.json

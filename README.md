@@ -20,24 +20,24 @@
 
 ## 2.使用指南
 
+### 2.0 Demo
+
+[![Demo Video](https://img.youtube.com/vi/mwNK7V85X50/maxresdefault.jpg)](https://youtu.be/mwNK7V85X50)
+
+- [Bilibili](https://www.bilibili.com/video/BV1N4TDzpETZ/)
+- [YouTube](https://youtu.be/mwNK7V85X50)
+
 ### 2.1. 环境配置
 
-1. 安装 [xmake](https://xmake.io/)
-2. 安装 VS Code 并添加 C++ 扩展
-3. 克隆项目仓库: `git clone https://github.com/liblaf/tiny-rubiks-cube.git`
-4. 安装依赖: `xmake require`
+1. 克隆项目仓库: `git clone https://github.com/liblaf/tiny-rubiks-cube.git`
+2. 安装 [xmake](https://xmake.io/)
 
 ### 2.2. 构建与运行
 
 ```bash
-# 配置项目
-xmake config --mode=debug
-
-# 构建项目
-xmake
-
-# 运行程序
-xmake run
+xmake config --mode=debug  # 配置项目
+xmake                      # 构建项目
+xmake run --workdir="$PWD" # 运行程序
 ```
 
 ### 2.3. 基本操作
@@ -45,7 +45,6 @@ xmake run
 1. **手动操作:**
    - F/B/U/D/L/R: 旋转前面/后面/上面/下面/左面/右面
    - Shift + 按键: 逆时针旋转
-   - F2: 重复上一次操作
 2. **记录与回放:**
    - 点击 "Record" 开始记录操作
    - 执行一系列旋转操作
@@ -60,7 +59,7 @@ xmake run
 - **旋转视图:** 鼠标左键拖动
 - **平移视图:** 鼠标右键拖动
 - **缩放视图:** 鼠标滚轮
-- **重置视图:** 按 R 键
+- **重置视图:** "Reset View" 按钮
 
 ## 3. 开发环境与工具
 
@@ -93,18 +92,17 @@ src/
   assets.h          # 3D模型资源加载定义
   cube.cc           # 整个魔方对象的实现
   cube.h            # 整个魔方对象的定义
-  cubie.cc          # 单个魔方块 (“小方块”) 的实现
+  cubie.cc          # 单个魔方块 ("小方块") 的实现
   cubie.h           # 单个魔方块的定义
-  main.cc           # 程序主入口, GUI回调
-  setup.cc          # Polyscope环境和魔方模型的初始化实现
+  main.cc           # 程序主入口, GUI 回调
+  setup.cc          # Polyscope 环境和魔方模型的初始化实现
   setup.h           # 初始化定义
   utils.cc          # 工具函数实现
   utils.h           # 工具函数定义
 .clang-format       # 代码格式化配置
-.clangd             # Clangd配置
-.gitignore          # Git忽略文件配置
-.repomixignore      # Repomix忽略文件配置 (项目提供的)
-Justfile            # 简化xmake命令的脚本
+.clangd             # Clangd 配置
+.gitignore          # Git 忽略文件配置
+Justfile            # 简化 xmake 命令的脚本
 xmake.lua           # Xmake构建配置文件
 ```
 
@@ -288,3 +286,18 @@ xmake.lua           # Xmake构建配置文件
     - 检测 F, B, U, D, L, R 键是否按下 (`ImGui::IsKeyPressed()`).
     - 检测 Shift 键是否按下 (`ImGui::IsKeyDown()`) 来确定旋转方向 (`clockwise`).
     - 调用 `cube->action(cube::Action(...))` 来触发相应的魔方操作.
+
+## 7. 参考资料
+
+- [C++ reference](https://cppreference.com/)
+- [clangd](https://clangd.llvm.org/)
+- [dbg-macro](https://github.com/sharkdp/dbg-macro)
+- [Dear ImGui](https://github.com/ocornut/imgui)
+- [Eigen](https://eigen.tuxfamily.org/)
+- [OpenGL Mathematics (GLM)](https://glm.g-truc.net/)
+- [Polyscope](https://polyscope.run/)
+- [RUBIK'S CUBE - Download Free 3D model by FromSi (@fromsi665) [4cc7c1b]](https://sketchfab.com/3d-models/rubiks-cube-4cc7c1bf585f4b929ddd32f6cab3ba58)
+- [spdlog](https://github.com/gabime/spdlog)
+- [tinyobjloader](https://github.com/tinyobjloader/tinyobjloader)
+- [Visual Studio Code](https://code.visualstudio.com/)
+- [xmake](https://xmake.io/)
